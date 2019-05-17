@@ -115,7 +115,7 @@ func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParame
 
 func getJobDetails(url string, params queryParameters) (string, float64, bool) {
 	var response jobDetailResponse
-	var buildTime int
+	var buildTime time.Duration
 
 	resp, errorMessage, ok := makeBasicAuthRequest(url, params.circleToken)
 	defer resp.Body.Close()
@@ -140,15 +140,11 @@ func getJobDetails(url string, params queryParameters) (string, float64, bool) {
 				continue
 			}
 
-			buildTime += action.RunTimeMillis
+			buildTime += time.Duration(action.RunTimeMillis) * time.Millisecond
 		}
 	}
 
-	seconds := float64((buildTime / 1000) % 60)
-	minutes := float64((buildTime / (1000 * 60)) % 60)
-	fmt.Printf("Minutes: %f, Seconds: %f\nCredit per min: %f\n", minutes, seconds, creditPerMin)
-
-	cost := (minutes + seconds/60) * creditPerMin
+	cost := buildTime.Minutes() * creditPerMin
 
 	fmt.Printf("build credits for %s: %f\n", response.Workflows.JobName, cost)
 
