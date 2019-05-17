@@ -18,6 +18,7 @@ package:
 functions:
   workflow-cost-estimator:
     handler: bin/workflow-cost-estimator
+    timeout: 600
     events:
       - http:
           path: workflow/cost-estimate
