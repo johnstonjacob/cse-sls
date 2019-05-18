@@ -315,22 +315,18 @@ func lookupCreditPerMin(executor, resourceClass, jobName string) (float64, error
 	return creditPerMin, nil
 }
 
-func snakeCaseToCamelCase(inputUnderScoreStr string) (camelCase string) {
+func snakeCaseToCamelCase(input string) (output string) {
 	isToUpper := false
 
-	for k, v := range inputUnderScoreStr {
-		if k == 0 {
-			camelCase = strings.ToUpper(string(inputUnderScoreStr[0]))
+	for _, v := range input {
+		if isToUpper {
+			output += strings.ToUpper(string(v))
+			isToUpper = false
 		} else {
-			if isToUpper {
-				camelCase += strings.ToUpper(string(v))
-				isToUpper = false
+			if v == '_' {
+				isToUpper = true
 			} else {
-				if v == '_' {
-					isToUpper = true
-				} else {
-					camelCase += string(v)
-				}
+				output += string(v)
 			}
 		}
 	}
@@ -338,10 +334,27 @@ func snakeCaseToCamelCase(inputUnderScoreStr string) (camelCase string) {
 
 }
 
+func normalizeVCS(vcs string) (string, error) {
+	if vcs == "gh" {
+		return "github", nil
+	}
+
+	if vcs == "bb" {
+		return "bitbucket", nil
+	}
+
+	if vcs == "github" || vcs == "bitbucket" {
+		return vcs, nil
+	}
+
+	return "", responseErr{fmt.Sprintf("VCS %s is not valid.", vcs), 400}
+}
+
 func paramSetup(request map[string]string) (queryParameters, circleURLs, error) {
-	var params queryParameters
+	params := make(queryParameters)
 	var urls circleURLs
 	var ok bool
+	var err error
 
 	// TODO refactor for /api/v2/workflow once project triplet is added to response
 	requiredParams := []string{"circle_token", "workflow_id", "project_name", "project_vcs", "project_user"}
@@ -355,6 +368,12 @@ func paramSetup(request map[string]string) (queryParameters, circleURLs, error) 
 		}
 		p := snakeCaseToCamelCase(v)
 		params[p] = request[v]
+	}
+
+	params["projectVcs"], err = normalizeVCS(params["projectVcs"])
+
+	if err != nil {
+		return params, urls, err
 	}
 
 	if request["circle_url"] == "" {
