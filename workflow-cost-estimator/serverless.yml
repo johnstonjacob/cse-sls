@@ -31,6 +31,6 @@ plugins:
 custom:
   customDomain:
     domainName: ce-scripts.circleci-support.com
-    basePath: /api/
+    basePath: 'api'
     stage: ${self:provider.stage}
     createRoute53Record: true

@@ -349,8 +349,8 @@ func paramSetup(request map[string]string) (queryParameters, circleURLs, error) 
 	// TODO refactor for /api/v2/workflow once project triplet is added to response
 
 	for _, v := range requiredParams {
-		if _, ok = request[v]; ok {
-			return params, urls, responseErr{fmt.Sprintf("Please provide query parameters: %s\n", strings.Join(requiredParams, ", ")), 400}
+		if _, ok = request[v]; !ok {
+			return params, urls, responseErr{fmt.Sprintf("Please provide query parameters: %s", strings.Join(requiredParams, ", ")), 400}
 
 		}
 		p := snakeCaseToCamelCase(v)
