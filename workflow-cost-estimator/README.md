@@ -23,6 +23,9 @@ Example response:
 }`
 
 
+## Limitations
+AWS API Gateways are limited to 30 seconds of execution time, including cold start time. This script is written in Go, so the uploaded binary doesn't require much startup time. The highest job number I have tried this script with is 92, and the response time ( not execution time ) was <10 seconds. 99.9% of users should be fine with this limitation. If you are consistently seeing timeouts, and there is no [statuspage](https://status.circleci.com/) about an outage, please raise an issue with the parameters you passed into the function.
+
 ## Deploying
 
 If you don't want to use the provided endpoint for any reason
