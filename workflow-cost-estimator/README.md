@@ -15,12 +15,12 @@ Query parameters:
 | project_user | The user or org name of the project corresponding to the workflow_id |
 
 Example response:
-```{
+`{
     "total_cost": 12.4,
     "total_credits": 20659,
     "total_runtime": "",
     "disclaimer": "This is a cost estimate. This is not an official CircleCI endpoint. Please contact jacobjohnston@circleci.com for questions."
-}
+}`
 
 
 ## Deploying
