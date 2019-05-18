@@ -10,11 +10,21 @@ type circleURLs struct {
 
 type queryParameters map[string]string
 
-type body struct {
+type responseBody struct {
 	TotalCost    float64 `json:"total_cost"`
 	TotalCredits float64 `json:"total_credits"`
 	TotalRuntime string  `json:"total_runtime"`
 	Disclaimer   string  `json:"disclaimer"`
+}
+
+func newResponseBody(totalCredits, totalCost float64) *responseBody {
+	b := new(responseBody)
+	disclaimer := "This is a cost estimate. This is not an official CircleCI endpoint. Please contact jacobjohnston@circleci.com for questions."
+	b.TotalCost = totalCost
+	b.TotalCredits = totalCredits
+	b.Disclaimer = disclaimer
+
+	return b
 }
 
 type responseErr struct {

@@ -25,33 +25,34 @@ type Response events.APIGatewayProxyResponse
 
 // Handler is our lambda handler invoked by the `lambda.Start` function call
 func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (Response, error) {
-	var body body
+	var responseBody responseBody
 
 	params, urls, err := paramSetup(request.QueryStringParameters)
 	if err != nil {
-		return *generateResponse(body, err), nil
+		return *generateResponse(responseBody, err), nil
 	}
 
 	err = getWorkflowStatus(urls, params)
 	if err != nil {
-		return *generateResponse(body, err), nil
+		return *generateResponse(responseBody, err), nil
 	}
 
 	jobs, err := getWorkflowJobs(urls, params)
 	if err != nil {
-		return *generateResponse(body, err), nil
+		return *generateResponse(responseBody, err), nil
 	}
 
-	body, err = tallyJobCost(jobs, urls, params)
+	responseBody, err = tallyJobCost(jobs, urls, params)
 
 	if err != nil {
-		return *generateResponse(body, err), nil
+		return *generateResponse(responseBody, err), nil
 	}
 
-	return *generateResponse(body, nil), nil
+	return *generateResponse(responseBody, nil), nil
 }
 
-func generateResponse(body body, err error) *Response {
+// TODO better variable names
+func generateResponse(responseBody responseBody, err error) *Response {
 	var buf bytes.Buffer
 	var bodyBytes []byte
 	var statusCode int
@@ -63,16 +64,16 @@ func generateResponse(body body, err error) *Response {
 		})
 
 		if err != nil {
-			return generateResponse(body, responseErr{err: err.Error(), statusCode: 500})
+			return generateResponse(responseBody, responseErr{err: err.Error(), statusCode: 500})
 		}
 		bodyBytes = errBody
 	} else {
-		responseBytes, err := json.Marshal(body)
+		responseBytes, err := json.Marshal(responseBody)
 		bodyBytes = responseBytes
 		statusCode = 200
 
 		if err != nil {
-			return generateResponse(body, responseErr{err: err.Error(), statusCode: 500})
+			return generateResponse(responseBody, responseErr{err: err.Error(), statusCode: 500})
 		}
 	}
 
@@ -88,10 +89,9 @@ func generateResponse(body body, err error) *Response {
 	}
 }
 
-func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParameters) (body, error) {
+func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParameters) (responseBody, error) {
 	var totalCredits float64
 	var wg sync.WaitGroup
-	var body body
 
 	wg.Add(len(jobs.Jobs))
 
@@ -128,12 +128,10 @@ func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParame
 	}*/
 
 	wg.Wait()
-	body.TotalCredits = math.Ceil(totalCredits)
-	totalPrice := costOfWorkflow(body.TotalCredits)
-	body.TotalCost = math.Ceil(totalPrice*100) / 100
+	totalCredits = math.Ceil(totalCredits)
+	totalPrice := math.Ceil(costOfWorkflow(totalCredits)*100) / 100
 
-	generateDisclaimer(&body)
-	return body, nil
+	return *newResponseBody(totalCredits, totalPrice), nil
 }
 
 func getJobDetails(url string, params queryParameters) (float64, error) {
@@ -272,10 +270,6 @@ func makeBasicAuthRequest(url string, token string) (*http.Response, error) {
 
 func costOfWorkflow(credits float64) float64 {
 	return credits * 0.0006
-}
-
-func generateDisclaimer(body *body) {
-	body.Disclaimer = "This is a cost estimate. This is not an official CircleCI endpoint. Please contact jacobjohnston@circleci.com for questions."
 }
 
 func lookupCreditPerMin(executor, resourceClass, jobName string) (float64, error) {
