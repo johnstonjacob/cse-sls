@@ -95,6 +95,7 @@ func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParame
 	wg.Add(len(jobs.Jobs))
 
 	c := make(chan float64, 4)
+	// TODO: implement this error handling
 	//ec := make(chan error)
 
 	for _, job := range jobs.Jobs {
@@ -127,18 +128,16 @@ func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParame
 
 	wg.Wait()
 	body.TotalCredits = math.Ceil(totalCredits)
-	totalPrice := totalCredits * creditPrice
+	totalPrice := costOfWorkflow(body.TotalCredits)
 	body.TotalCost = math.Ceil(totalPrice*100) / 100
-	body.Disclaimer = disclaimer
 
+	generateDisclaimer(&body)
 	return body, nil
 }
 
 func getJobDetails(url string, params queryParameters) (float64, error) {
 	var response jobDetailResponse
 	var buildTime time.Duration
-	var creditPerMin float64
-	var ok bool
 
 	resp, err := makeBasicAuthRequest(url, params.circleToken)
 	defer resp.Body.Close()
@@ -154,8 +153,10 @@ func getJobDetails(url string, params queryParameters) (float64, error) {
 
 	resourceClass := response.Picard.ResourceClass.Class
 	executor := response.Picard.Executor
-	if creditPerMin, ok = resourceClasses[executor][resourceClass]; !ok {
-		return 0, responseErr{fmt.Sprintf("Missing resource class cost for %s:%s in job %s", executor, resourceClass, response.Workflows.JobName), 500}
+	creditPerMin, err := lookupCreditPerMin(executor, resourceClass, response.Workflows.JobName)
+
+	if err != nil {
+		return 0, err
 	}
 
 	for _, step := range response.Steps {
@@ -170,9 +171,9 @@ func getJobDetails(url string, params queryParameters) (float64, error) {
 
 	buildTime = buildTime.Round(time.Second)
 
-	cost := buildTime.Minutes() * creditPerMin
+	credits := buildTime.Minutes() * creditPerMin
 
-	return cost, nil
+	return credits, nil
 }
 
 func getWorkflowJobs(urls circleURLs, params queryParameters) (workflowJobsResponse, error) {
@@ -265,6 +266,49 @@ func makeBasicAuthRequest(url string, token string) (*http.Response, error) {
 	}
 
 	return resp, nil
+}
+
+func costOfWorkflow(credits float64) float64 {
+	return credits * 0.0006
+}
+
+func generateDisclaimer(body *body) {
+	body.Disclaimer = "This is a cost estimate. This is not an official CircleCI endpoint. Please contact jacobjohnston@circleci.com for questions."
+}
+
+func lookupCreditPerMin(executor, resourceClass, jobName string) (float64, error) {
+	var creditPerMin float64
+	var ok bool
+
+	var resourceClasses = map[string]map[string]float64{
+		"docker": {
+			"small":    5,
+			"medium":   10,
+			"medium+":  15,
+			"large":    20,
+			"xlarge":   40,
+			"2xlarge":  80,
+			"2xlarge+": 100,
+			"3xlarge":  160,
+			"4xlarge":  320,
+		},
+		"machine": {
+			"small":   5,
+			"medium":  10,
+			"large":   20,
+			"xlarge":  40,
+			"2xlarge": 80,
+			"3xlarge": 120,
+		},
+		"macOS":   {},
+		"GPU":     {},
+		"windows": {},
+	}
+
+	if creditPerMin, ok = resourceClasses[executor][resourceClass]; !ok {
+		return 0, responseErr{fmt.Sprintf("Missing resource class cost for %s:%s in job %s", executor, resourceClass, jobName), 500}
+	}
+	return creditPerMin, nil
 }
 
 func paramSetup(request map[string]string) (queryParameters, circleURLs, error) {

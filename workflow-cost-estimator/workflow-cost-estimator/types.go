@@ -2,34 +2,6 @@ package main
 
 import "time"
 
-var creditPrice = 0.0006
-var resourceClasses = map[string]map[string]float64{
-	"docker": {
-		"small":    5,
-		"medium":   10,
-		"medium+":  15,
-		"large":    20,
-		"xlarge":   40,
-		"2xlarge":  80,
-		"2xlarge+": 100,
-		"3xlarge":  160,
-		"4xlarge":  320,
-	},
-	"machine": {
-		"small":   5,
-		"medium":  10,
-		"large":   20,
-		"xlarge":  40,
-		"2xlarge": 80,
-		"3xlarge": 120,
-	},
-	"macOS":   {},
-	"GPU":     {},
-	"windows": {},
-}
-
-var disclaimer = "This is a cost estimate. This is not an official CircleCI endpoint. Please contact jacobjohnston@circleci.com for questions."
-
 type circleURLs struct {
 	circleURL string
 	v1URL     string
