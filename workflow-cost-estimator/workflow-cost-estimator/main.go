@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -25,96 +24,90 @@ type Response events.APIGatewayProxyResponse
 
 // Handler is our lambda handler invoked by the `lambda.Start` function call
 func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (Response, error) {
-	var buf bytes.Buffer
+	var body body
 
-	params, urls, ok, reason := paramSetup(request.QueryStringParameters)
-
-	if !ok {
-		body, err := json.Marshal(map[string]interface{}{
-			"message": reason,
-		})
-
-		if err != nil {
-			return Response{StatusCode: 404}, err
-		}
-
-		json.HTMLEscape(&buf, body)
-		return Response{StatusCode: 401, Body: buf.String()}, nil
+	params, urls, err := paramSetup(request.QueryStringParameters)
+	if err != nil {
+		return *generateResponse(body, err), nil
 	}
 
-	errorMessage, statusCode, ok := getWorkflowStatus(urls, params)
-
-	if !ok {
-		body, err := json.Marshal(map[string]interface{}{
-			"message": errorMessage,
-		})
-
-		if err != nil {
-			return Response{StatusCode: 500}, err
-		}
-
-		json.HTMLEscape(&buf, body)
-
-		resp := Response{
-			StatusCode:      statusCode,
-			IsBase64Encoded: false,
-			Body:            buf.String(),
-			Headers: map[string]string{
-				"Content-Type": "application/json",
-			},
-		}
-
-		return resp, nil
-	}
-	errorMessage, statusCode, ok, jobs := getWorkflowJobs(urls, params)
-
-	errorMessage, totalCredits, totalCost, ok := tallyJobCost(jobs, urls, params)
-
-	if !ok {
-		return Response{StatusCode: 500}, errors.New(errorMessage)
+	err = getWorkflowStatus(urls, params)
+	if err != nil {
+		return *generateResponse(body, err), nil
 	}
 
-	body, err := json.Marshal(map[string]interface{}{
-		"total_credits": totalCredits,
-		"total_cost":    totalCost,
-	})
+	jobs, err := getWorkflowJobs(urls, params)
+	if err != nil {
+		return *generateResponse(body, err), nil
+	}
+
+	body, err = tallyJobCost(jobs, urls, params)
 
 	if err != nil {
-		return Response{StatusCode: 500}, err
+		return *generateResponse(body, err), nil
 	}
 
-	json.HTMLEscape(&buf, body)
+	return *generateResponse(body, nil), nil
+}
 
-	resp := Response{
-		StatusCode:      200,
+func generateResponse(body body, err error) *Response {
+	var buf bytes.Buffer
+	var bodyBytes []byte
+	var statusCode int
+
+	if err, ok := err.(responseErr); ok {
+		statusCode = err.statusCode
+		errBody, err := json.Marshal(map[string]interface{}{
+			"error": err.Error(),
+		})
+
+		if err != nil {
+			return generateResponse(body, responseErr{err: err.Error(), statusCode: 500})
+		}
+		bodyBytes = errBody
+	} else {
+		responseBytes, err := json.Marshal(body)
+		bodyBytes = responseBytes
+		statusCode = 200
+
+		if err != nil {
+			return generateResponse(body, responseErr{err: err.Error(), statusCode: 500})
+		}
+	}
+
+	json.HTMLEscape(&buf, bodyBytes)
+
+	return &Response{
+		StatusCode:      statusCode,
 		IsBase64Encoded: false,
 		Body:            buf.String(),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
 	}
-
-	return resp, nil
 }
 
-func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParameters) (string, float64, float64, bool) {
+func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParameters) (body, error) {
 	var totalCredits float64
 	var wg sync.WaitGroup
+	var body body
+
 	wg.Add(len(jobs.Jobs))
 
 	c := make(chan float64, 4)
+	//ec := make(chan error)
 
 	for _, job := range jobs.Jobs {
 		go func(job Jobs) {
 
 			jobURL := fmt.Sprintf("%sproject/%s/%s/%s/%d", urls.v1URL, params.projectVCS, params.projectUser, params.projectName, job.JobNumber)
-			errorMessage, cost, ok := getJobDetails(jobURL, params)
-			_ = errorMessage
-			_ = ok
+			cost, err := getJobDetails(jobURL, params)
+			_ = err
 
-			if !ok {
-				//return errorMessage, 0, 0, false
-			}
+			/*		if err != nil {
+					ec <- err
+					return
+				}*/
 			c <- cost
 		}(job)
 	}
@@ -127,32 +120,42 @@ func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParame
 
 	}(&totalCredits)
 
+	// TODO: return all errors not just the first one
+	/*for err := range ec {
+		return body, err
+	}*/
+
 	wg.Wait()
-	totalCredits = math.Ceil(totalCredits)
+	body.TotalCredits = math.Ceil(totalCredits)
 	totalPrice := totalCredits * creditPrice
-	totalPrice = math.Ceil(totalPrice*100) / 100
-	return "", totalCredits, totalPrice, true
+	body.TotalCost = math.Ceil(totalPrice*100) / 100
+	body.Disclaimer = disclaimer
+
+	return body, nil
 }
 
-func getJobDetails(url string, params queryParameters) (string, float64, bool) {
+func getJobDetails(url string, params queryParameters) (float64, error) {
 	var response jobDetailResponse
 	var buildTime time.Duration
+	var creditPerMin float64
+	var ok bool
 
-	resp, errorMessage, ok := makeBasicAuthRequest(url, params.circleToken)
+	resp, err := makeBasicAuthRequest(url, params.circleToken)
 	defer resp.Body.Close()
 
-	if !ok {
-		return errorMessage, 500, false
+	if err != nil {
+		return 0, err
 	}
 
-	errorMessage, ok = unmarshalAPIResp(resp, &response)
+	err = unmarshalAPIResp(resp, &response)
+	if err != nil {
+		return 0, err
+	}
 
 	resourceClass := response.Picard.ResourceClass.Class
-	exeuctor := response.Picard.Executor
-	creditPerMin := resourceClasses[exeuctor][resourceClass]
-
-	if !ok {
-		return errorMessage, 500, false
+	executor := response.Picard.Executor
+	if creditPerMin, ok = resourceClasses[executor][resourceClass]; !ok {
+		return 0, responseErr{fmt.Sprintf("Missing resource class cost for %s:%s in job %s", executor, resourceClass, response.Workflows.JobName), 500}
 	}
 
 	for _, step := range response.Steps {
@@ -169,72 +172,71 @@ func getJobDetails(url string, params queryParameters) (string, float64, bool) {
 
 	cost := buildTime.Minutes() * creditPerMin
 
-	return "", cost, true
-
+	return cost, nil
 }
 
-func getWorkflowJobs(urls circleURLs, params queryParameters) (string, int, bool, workflowJobsResponse) {
+func getWorkflowJobs(urls circleURLs, params queryParameters) (workflowJobsResponse, error) {
 	var response workflowJobsResponse
 	workflowJobsURL := fmt.Sprintf("%sworkflow/%s/jobs", urls.v2URL, params.workflowID)
 
-	resp, errorMessage, ok := makeBasicAuthRequest(workflowJobsURL, params.circleToken)
+	resp, err := makeBasicAuthRequest(workflowJobsURL, params.circleToken)
 	defer resp.Body.Close()
 
-	if !ok {
-		return errorMessage, 500, false, response
+	if err != nil {
+		return response, err
 	}
 
-	errorMessage, ok = unmarshalAPIResp(resp, &response)
+	err = unmarshalAPIResp(resp, &response)
 
-	if !ok {
-		return errorMessage, 500, false, response
+	if err != nil {
+		return response, err
 	}
 
-	return "", 0, true, response
+	return response, err
 }
 
-func getWorkflowStatus(urls circleURLs, params queryParameters) (string, int, bool) {
+func getWorkflowStatus(urls circleURLs, params queryParameters) error {
 	var response workflowResponse
 	workflowURL := fmt.Sprintf("%sworkflow/%s", urls.v2URL, params.workflowID)
 
-	resp, errorMessage, ok := makeBasicAuthRequest(workflowURL, params.circleToken)
+	resp, err := makeBasicAuthRequest(workflowURL, params.circleToken)
 	defer resp.Body.Close()
 
-	if !ok {
-		return errorMessage, 500, false
+	if err != nil {
+		return err
 	}
 
-	errorMessage, ok = unmarshalAPIResp(resp, &response)
+	err = unmarshalAPIResp(resp, &response)
 
-	if !ok {
-		return errorMessage, 500, false
+	if err != nil {
+		return err
 	}
 
 	if response.Status != "success" && response.Status != "failed" {
-		return fmt.Sprintf("Workflow status is %s. Status must be 'success' or 'failed' to estimate cost", response.Status), 202, false
+		return responseErr{fmt.Sprintf("Workflow status is %s. Status must be 'success' or 'failed' to estimate cost", response.Status), 201}
 	}
 
-	return "", 0, true
+	return nil
 }
 
-func unmarshalAPIResp(resp *http.Response, f interface{}) (string, bool) {
+func unmarshalAPIResp(resp *http.Response, f interface{}) error {
 	var bodyString string
 
 	if resp.StatusCode == http.StatusOK {
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return fmt.Sprintf("Error reading API response. Error: %s", err), false
+			return responseErr{fmt.Sprintf("Error reading API response. Error: %s", err), 500}
 		}
 		bodyString = string(bodyBytes)
 	} else {
-		return fmt.Sprintf("Bad status code from API response. Status code: %d", resp.StatusCode), false
+		return responseErr{fmt.Sprintf("Bad status code from CCI API response. Status code: %d", resp.StatusCode), 500}
 	}
 
 	if err := json.Unmarshal([]byte(bodyString), &f); err != nil {
-		return fmt.Sprintf("Error unmarshalling JSON resposnse. Error: %s", err), false
+		return responseErr{fmt.Sprintf("Error unmarshalling JSON resposnse. Error: %s", err), 500}
 	}
 
-	return "", true
+	return nil
 }
 
 func basicAuth(username, password string) string {
@@ -242,7 +244,7 @@ func basicAuth(username, password string) string {
 	return base64.StdEncoding.EncodeToString([]byte(auth))
 }
 
-func makeBasicAuthRequest(url string, token string) (*http.Response, string, bool) {
+func makeBasicAuthRequest(url string, token string) (*http.Response, error) {
 	client := &http.Client{
 		Timeout: time.Second * 10,
 	}
@@ -250,7 +252,7 @@ func makeBasicAuthRequest(url string, token string) (*http.Response, string, boo
 	req, err := http.NewRequest("GET", url, nil)
 
 	if err != nil {
-		return nil, fmt.Sprintf("Error creating HTTP client with provided URL. URL: %s. Error: %s", url, err), false
+		return nil, responseErr{fmt.Sprintf("Error creating HTTP client with provided URL. URL: %s. Error: %s", url, err), 500}
 	}
 
 	req.Header.Add("Authorization", "Basic "+basicAuth(token, ""))
@@ -259,18 +261,19 @@ func makeBasicAuthRequest(url string, token string) (*http.Response, string, boo
 	resp, err := client.Do(req)
 
 	if err != nil {
-		return nil, fmt.Sprintf("Error getting requested URL. URL: %s. Error: %s", url, err), false
+		return nil, responseErr{fmt.Sprintf("Error getting requested URL. URL: %s. Error: %s", url, err), 500}
 	}
 
-	return resp, "", true
+	return resp, nil
 }
 
-func paramSetup(request map[string]string) (queryParameters, circleURLs, bool, string) {
+func paramSetup(request map[string]string) (queryParameters, circleURLs, error) {
 	var params queryParameters
 	var urls circleURLs
 
 	if request == nil || request["circle_token"] == "" || request["workflow_id"] == "" || request["project_name"] == "" || request["project_user"] == "" || request["project_vcs"] == "" {
-		return params, urls, false, "Please provide query parameters: circle_token, workflow_id, project_name, project_user, project_vcs"
+		err := responseErr{"Please provide query parameters: circle_token, workflow_id, project_name, project_user, project_vcs", 400}
+		return params, urls, err
 	}
 
 	if request["circle_url"] == "" {
@@ -288,7 +291,7 @@ func paramSetup(request map[string]string) (queryParameters, circleURLs, bool, s
 	params.projectUser = request["project_user"]
 	params.projectVCS = request["project_vcs"]
 
-	return params, urls, true, ""
+	return params, urls, nil
 }
 
 func main() {

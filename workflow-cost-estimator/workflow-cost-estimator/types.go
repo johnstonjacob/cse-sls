@@ -28,6 +28,8 @@ var resourceClasses = map[string]map[string]float64{
 	"windows": {},
 }
 
+var disclaimer = "This is a cost estimate. This is not an official CircleCI endpoint. Please contact jacobjohnston@circleci.com for questions."
+
 type circleURLs struct {
 	circleURL string
 	v1URL     string
@@ -41,6 +43,22 @@ type queryParameters struct {
 	circleToken string
 	workflowID  string
 	circleURL   string
+}
+
+type body struct {
+	TotalCost    float64 `json:"total_cost"`
+	TotalCredits float64 `json:"total_credits"`
+	TotalRuntime string  `json:"total_runtime"`
+	Disclaimer   string  `json:"disclaimer"`
+}
+
+type responseErr struct {
+	err        string
+	statusCode int
+}
+
+func (e responseErr) Error() string {
+	return e.err
 }
 
 // Actions is a struct of job details actions
