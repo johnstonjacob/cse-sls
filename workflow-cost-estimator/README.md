@@ -4,6 +4,7 @@ The Workflow Cost Estimator is a lambda function with the goal of estimating a g
 
 
 Query parameters:
+
 | Parameter | Description |
 |--|--|
 | circle_token | CircleCI API token |
