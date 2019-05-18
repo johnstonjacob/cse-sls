@@ -5,7 +5,7 @@ frameworkVersion: ">=1.28.0 <2.0.0"
 provider:
   name: aws
   runtime: go1.x
-  stage: ${env:SLS_STAGE}
+  stage: ${env:SLS_STAGE, 'dev'}
   region: us-east-2
   versionFunctions: false
 
@@ -18,9 +18,19 @@ package:
 functions:
   workflow-cost-estimator:
     handler: bin/workflow-cost-estimator
-    timeout: 600
+    timeout: 30
     memorySize: 1024
     events:
       - http:
           path: workflow/cost-estimate
           method: get
+
+plugins:
+  - serverless-domain-manager
+
+custom:
+  customDomain:
+    domainName: ce-scripts.circleci-support.com
+    basePath: /api/
+    stage: ${self:provider.stage}
+    createRoute53Record: true
