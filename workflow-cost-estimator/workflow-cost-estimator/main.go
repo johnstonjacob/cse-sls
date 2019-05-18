@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"math"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -101,7 +102,7 @@ func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParame
 	for _, job := range jobs.Jobs {
 		go func(job Jobs) {
 
-			jobURL := fmt.Sprintf("%sproject/%s/%s/%s/%d", urls.v1URL, params.projectVCS, params.projectUser, params.projectName, job.JobNumber)
+			jobURL := fmt.Sprintf("%sproject/%s/%s/%s/%d", urls.v1URL, params["projectVcs"], params["projectUser"], params["projectName"], job.JobNumber)
 			cost, err := getJobDetails(jobURL, params)
 			_ = err
 
@@ -139,7 +140,7 @@ func getJobDetails(url string, params queryParameters) (float64, error) {
 	var response jobDetailResponse
 	var buildTime time.Duration
 
-	resp, err := makeBasicAuthRequest(url, params.circleToken)
+	resp, err := makeBasicAuthRequest(url, params["circleToken"])
 	defer resp.Body.Close()
 
 	if err != nil {
@@ -178,9 +179,9 @@ func getJobDetails(url string, params queryParameters) (float64, error) {
 
 func getWorkflowJobs(urls circleURLs, params queryParameters) (workflowJobsResponse, error) {
 	var response workflowJobsResponse
-	workflowJobsURL := fmt.Sprintf("%sworkflow/%s/jobs", urls.v2URL, params.workflowID)
+	workflowJobsURL := fmt.Sprintf("%sworkflow/%s/jobs", urls.v2URL, params["workflowId"])
 
-	resp, err := makeBasicAuthRequest(workflowJobsURL, params.circleToken)
+	resp, err := makeBasicAuthRequest(workflowJobsURL, params["circleToken"])
 	defer resp.Body.Close()
 
 	if err != nil {
@@ -198,9 +199,9 @@ func getWorkflowJobs(urls circleURLs, params queryParameters) (workflowJobsRespo
 
 func getWorkflowStatus(urls circleURLs, params queryParameters) error {
 	var response workflowResponse
-	workflowURL := fmt.Sprintf("%sworkflow/%s", urls.v2URL, params.workflowID)
+	workflowURL := fmt.Sprintf("%sworkflow/%s", urls.v2URL, params["workflowId"])
 
-	resp, err := makeBasicAuthRequest(workflowURL, params.circleToken)
+	resp, err := makeBasicAuthRequest(workflowURL, params["circleToken"])
 	defer resp.Body.Close()
 
 	if err != nil {
@@ -314,14 +315,46 @@ func lookupCreditPerMin(executor, resourceClass, jobName string) (float64, error
 	return creditPerMin, nil
 }
 
+func snakeCaseToCamelCase(inputUnderScoreStr string) (camelCase string) {
+	isToUpper := false
+
+	for k, v := range inputUnderScoreStr {
+		if k == 0 {
+			camelCase = strings.ToUpper(string(inputUnderScoreStr[0]))
+		} else {
+			if isToUpper {
+				camelCase += strings.ToUpper(string(v))
+				isToUpper = false
+			} else {
+				if v == '_' {
+					isToUpper = true
+				} else {
+					camelCase += string(v)
+				}
+			}
+		}
+	}
+	return
+
+}
+
 func paramSetup(request map[string]string) (queryParameters, circleURLs, error) {
 	var params queryParameters
 	var urls circleURLs
+	var ok bool
 
 	// TODO refactor for /api/v2/workflow once project triplet is added to response
-	if request == nil || request["circle_token"] == "" || request["workflow_id"] == "" || request["project_name"] == "" || request["project_user"] == "" || request["project_vcs"] == "" {
-		err := responseErr{"Please provide query parameters: circle_token, workflow_id, project_name, project_user, project_vcs", 400}
-		return params, urls, err
+	requiredParams := []string{"circle_token", "workflow_id", "project_name", "project_vcs", "project_user"}
+
+	// TODO refactor for /api/v2/workflow once project triplet is added to response
+
+	for _, v := range requiredParams {
+		if _, ok = request[v]; ok {
+			return params, urls, responseErr{fmt.Sprintf("Please provide query parameters: %s\n", strings.Join(requiredParams, ", ")), 400}
+
+		}
+		p := snakeCaseToCamelCase(v)
+		params[p] = request[v]
 	}
 
 	if request["circle_url"] == "" {
@@ -332,12 +365,6 @@ func paramSetup(request map[string]string) (queryParameters, circleURLs, error) 
 
 	urls.v1URL = fmt.Sprintf("%s/api/v1.1/", urls.circleURL)
 	urls.v2URL = fmt.Sprintf("%s/api/v2/", urls.circleURL)
-
-	params.circleToken = request["circle_token"]
-	params.workflowID = request["workflow_id"]
-	params.projectName = request["project_name"]
-	params.projectUser = request["project_user"]
-	params.projectVCS = request["project_vcs"]
 
 	return params, urls, nil
 }

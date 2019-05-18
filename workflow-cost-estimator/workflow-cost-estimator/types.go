@@ -8,14 +8,7 @@ type circleURLs struct {
 	v2URL     string
 }
 
-type queryParameters struct {
-	projectName string
-	projectUser string
-	projectVCS  string
-	circleToken string
-	workflowID  string
-	circleURL   string
-}
+type queryParameters map[string]string
 
 type body struct {
 	TotalCost    float64 `json:"total_cost"`
