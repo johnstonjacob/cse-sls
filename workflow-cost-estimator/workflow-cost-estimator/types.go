@@ -88,18 +88,20 @@ type jobDetailResponse struct {
 	} `json:"workflows"`
 }
 
+// Jobs is
+type Jobs struct {
+	ID           string        `json:"id"`
+	Name         string        `json:"name"`
+	Type         string        `json:"type"`
+	Status       string        `json:"status"`
+	StartTime    time.Time     `json:"start_time"`
+	Dependencies []interface{} `json:"dependencies"`
+	JobNumber    int           `json:"job_number"`
+	StopTime     time.Time     `json:"stop_time"`
+}
 type workflowJobsResponse struct {
 	NextPageToken interface{} `json:"next_page_token"`
-	Jobs          []struct {
-		ID           string        `json:"id"`
-		Name         string        `json:"name"`
-		Type         string        `json:"type"`
-		Status       string        `json:"status"`
-		StartTime    time.Time     `json:"start_time"`
-		Dependencies []interface{} `json:"dependencies"`
-		JobNumber    int           `json:"job_number"`
-		StopTime     time.Time     `json:"stop_time"`
-	} `json:"jobs"`
+	Jobs          []Jobs      `json:"jobs"`
 }
 
 type workflowResponse struct {

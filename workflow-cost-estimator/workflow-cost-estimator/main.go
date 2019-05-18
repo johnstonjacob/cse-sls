@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -66,15 +68,15 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (Respon
 	}
 	errorMessage, statusCode, ok, jobs := getWorkflowJobs(urls, params)
 
-	errorMessage, totalCost, ok := tallyJobCost(jobs, urls, params)
-	_ = totalCost
+	errorMessage, totalCredits, totalCost, ok := tallyJobCost(jobs, urls, params)
 
 	if !ok {
 		return Response{StatusCode: 500}, errors.New(errorMessage)
 	}
 
 	body, err := json.Marshal(map[string]interface{}{
-		"message": "Go Serverless v1.0! Your function executed successfully!",
+		"total_credits": totalCredits,
+		"total_cost":    totalCost,
 	})
 
 	if err != nil {
@@ -95,22 +97,41 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (Respon
 	return resp, nil
 }
 
-func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParameters) (string, float64, bool) {
+func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParameters) (string, float64, float64, bool) {
 	var totalCredits float64
+	var wg sync.WaitGroup
+	wg.Add(len(jobs.Jobs))
+
+	c := make(chan float64, 4)
 
 	for _, job := range jobs.Jobs {
-		jobURL := fmt.Sprintf("%sproject/%s/%s/%s/%d", urls.v1URL, params.projectVCS, params.projectUser, params.projectName, job.JobNumber)
-		errorMessage, cost, ok := getJobDetails(jobURL, params)
+		go func(job Jobs) {
 
-		if !ok {
-			return errorMessage, 0, false
-		}
-		totalCredits += cost
+			jobURL := fmt.Sprintf("%sproject/%s/%s/%s/%d", urls.v1URL, params.projectVCS, params.projectUser, params.projectName, job.JobNumber)
+			errorMessage, cost, ok := getJobDetails(jobURL, params)
+			_ = errorMessage
+			_ = ok
+
+			if !ok {
+				//return errorMessage, 0, 0, false
+			}
+			c <- cost
+		}(job)
 	}
-	fmt.Println(totalCredits, float64(totalCredits))
-	fmt.Println("total cost:", float64(totalCredits)*creditPrice)
-	fmt.Println(totalCredits, "total credits")
-	return "", totalCredits, true
+
+	go func(totalCredits *float64) {
+		for credits := range c {
+			*totalCredits += credits
+			wg.Done()
+		}
+
+	}(&totalCredits)
+
+	wg.Wait()
+	totalCredits = math.Ceil(totalCredits)
+	totalPrice := totalCredits * creditPrice
+	totalPrice = math.Ceil(totalPrice*100) / 100
+	return "", totalCredits, totalPrice, true
 }
 
 func getJobDetails(url string, params queryParameters) (string, float64, bool) {
@@ -144,9 +165,9 @@ func getJobDetails(url string, params queryParameters) (string, float64, bool) {
 		}
 	}
 
-	cost := buildTime.Minutes() * creditPerMin
+	buildTime = buildTime.Round(time.Second)
 
-	fmt.Printf("build credits for %s: %f\n", response.Workflows.JobName, cost)
+	cost := buildTime.Minutes() * creditPerMin
 
 	return "", cost, true
 
