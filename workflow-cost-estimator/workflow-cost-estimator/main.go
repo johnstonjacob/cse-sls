@@ -230,6 +230,7 @@ func unmarshalAPIResp(resp *http.Response, f interface{}) error {
 		}
 		bodyString = string(bodyBytes)
 	} else {
+		// TODO Better error return
 		return responseErr{fmt.Sprintf("Bad status code from CCI API response. Status code: %d", resp.StatusCode), 500}
 	}
 
@@ -280,6 +281,7 @@ func lookupCreditPerMin(executor, resourceClass, jobName string) (float64, error
 	var creditPerMin float64
 	var ok bool
 
+	// TODO add all resource classes
 	var resourceClasses = map[string]map[string]float64{
 		"docker": {
 			"small":    5,
@@ -305,6 +307,7 @@ func lookupCreditPerMin(executor, resourceClass, jobName string) (float64, error
 		"windows": {},
 	}
 
+	//TODO add check for executor, just in case
 	if creditPerMin, ok = resourceClasses[executor][resourceClass]; !ok {
 		return 0, responseErr{fmt.Sprintf("Missing resource class cost for %s:%s in job %s", executor, resourceClass, jobName), 500}
 	}
@@ -315,6 +318,7 @@ func paramSetup(request map[string]string) (queryParameters, circleURLs, error) 
 	var params queryParameters
 	var urls circleURLs
 
+	// TODO refactor for /api/v2/workflow once project triplet is added to response
 	if request == nil || request["circle_token"] == "" || request["workflow_id"] == "" || request["project_name"] == "" || request["project_user"] == "" || request["project_vcs"] == "" {
 		err := responseErr{"Please provide query parameters: circle_token, workflow_id, project_name, project_user, project_vcs", 400}
 		return params, urls, err
