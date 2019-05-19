@@ -26,6 +26,14 @@ jobs:
                     sudo apt-get install -y nodejs
                 name: install node
             - run: sudo npm i -g serverless
+            - run:
+                name: set env
+                command: |
+                    if [ "${CIRCLE_BRANCH}" == "master" ]; then
+                        export SLS_STAGE=prod
+                    else
+                        export SLS_STAGE=staging
+                    fi
             - run: ~/proj/.circleci/scripts/commit_check.sh
 
 workflows:
@@ -34,3 +42,4 @@ workflows:
         jobs:
             - build:
                 context: ORB-PUBLISHING
+
