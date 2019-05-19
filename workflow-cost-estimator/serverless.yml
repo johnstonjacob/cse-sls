@@ -12,7 +12,7 @@ provider:
       ce_name: Jacob J
       ce_email: jacobjohnston@gmail.com
       ce_duration: persistent
-      ce_purpose: Serverless framework services for CSE provided scripts, workaround, etc
+      ce_purpose: Serverless framework services for CSE provided scripts, workaround, etc. This service create Lambda functions for customers
 
 package:
  exclude:
