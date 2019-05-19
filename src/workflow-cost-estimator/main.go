@@ -302,23 +302,27 @@ func lookupCreditPerMin(executor, resourceClass, jobName string) (float64, error
 			"4xlarge":  320,
 		},
 		"machine": {
-			"small":   5,
-			"medium":  10,
-			"large":   20,
-			"xlarge":  40,
-			"2xlarge": 80,
-			"3xlarge": 120,
+			"small":      5,
+			"medium":     10,
+			"large":      20,
+			"xlarge":     40,
+			"2xlarge":    80,
+			"3xlarge":    120,
+			"gpu.small":  80,
+			"gpu.medium": 160,
+			"gpu.large":  320,
 		},
-		"macOS":       {},
-		"GPU":         {},
-		"windows":     {},
-		"windows-GPU": {},
+		"macos": {
+			"small":  25,
+			"medium": 50,
+			"large":  100,
+		},
+		"windows": {},
 	}
 
 	if _, ok = resourceClasses[executor]; !ok {
 		return 0, responseErr{fmt.Sprintf("Missing Executor. Please contact jacobjohnston@circleci.com with this error message, your parameters, and executor type. Executor: %s", executor), 500}
 	}
-
 	if creditPerMin, ok = resourceClasses[executor][resourceClass]; !ok {
 		return 0, responseErr{fmt.Sprintf("Missing resource class cost for %s:%s in job %s", executor, resourceClass, jobName), 500}
 	}
