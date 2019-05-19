@@ -1,4 +1,4 @@
-service: workflow-cost-estimator
+service: cse-scripts
 
 frameworkVersion: ">=1.28.0 <2.0.0"
 
@@ -8,6 +8,11 @@ provider:
   stage: ${env:SLS_STAGE, 'dev'}
   region: us-east-2
   versionFunctions: false
+  tags:
+      ce_name: Jacob J
+      ce_email: jacobjohnston@gmail.com
+      ce_duration: persistent
+      ce_purpose: Serverless framework services for CSE provided scripts, workaround, etc
 
 package:
  exclude:
