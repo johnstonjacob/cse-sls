@@ -8,6 +8,7 @@ references:
     environment: &environment
         environment:
             GO111MODULE: "on"
+            BASH_ENV: /root/.bashrc
 
     default_settings: &default_settings
         docker:
@@ -29,12 +30,18 @@ jobs:
             - run:
                 name: set env
                 command: |
+                    cd && touch $BASH_ENV
+
                     if [ "${CIRCLE_BRANCH}" == "master" ]; then
-                        export SLS_STAGE=prod
+                        echo "export SLS_STAGE=prod" | >> $BASH_ENV
                     else
                         export SLS_STAGE=staging
                     fi
-            - run: ~/proj/.circleci/scripts/commit_check.sh
+            - run:
+                  name: Run commit check and BTD
+                  command: |
+                      source $BASH_ENV
+                      ~/proj/.circleci/scripts/commit_check.sh
 
 workflows:
     version: 2.1
