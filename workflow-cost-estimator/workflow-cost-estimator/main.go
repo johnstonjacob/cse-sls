@@ -92,24 +92,23 @@ func generateResponse(responseBody responseBody, err error) *Response {
 func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParameters) (responseBody, error) {
 	var totalCredits float64
 	var wg sync.WaitGroup
+	var errors []error
 
 	wg.Add(len(jobs.Jobs))
 
 	c := make(chan float64, 4)
-	// TODO: implement this error handling
-	//ec := make(chan error)
+	ec := make(chan error, 4)
 
 	for _, job := range jobs.Jobs {
 		go func(job Jobs) {
 
 			jobURL := fmt.Sprintf("%sproject/%s/%s/%s/%d", urls.v1URL, params["projectVcs"], params["projectUser"], params["projectName"], job.JobNumber)
 			cost, err := getJobDetails(jobURL, params)
-			_ = err
 
-			/*		if err != nil {
-					ec <- err
-					return
-				}*/
+			if err != nil {
+				ec <- err
+				return
+			}
 			c <- cost
 		}(job)
 	}
@@ -122,12 +121,19 @@ func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParame
 
 	}(&totalCredits)
 
-	// TODO: return all errors not just the first one
-	/*for err := range ec {
-		return body, err
-	}*/
+	go func(errors *[]error) {
+		for err := range ec {
+			*errors = append(*errors, err)
+			wg.Done()
+		}
+	}(&errors)
 
 	wg.Wait()
+
+	if len(errors) > 0 {
+		return responseBody{}, responseErr{fmt.Sprintf("Error retrieving job details: %+v", errors), 400}
+	}
+
 	totalCredits = math.Ceil(totalCredits)
 	totalPrice := math.Ceil(costOfWorkflow(totalCredits)*100) / 100
 
@@ -229,8 +235,13 @@ func unmarshalAPIResp(resp *http.Response, f interface{}) error {
 		}
 		bodyString = string(bodyBytes)
 	} else {
-		// TODO Better error return
-		return responseErr{fmt.Sprintf("Bad status code from CCI API response. Status code: %d", resp.StatusCode), 500}
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return responseErr{fmt.Sprintf("Error reading API response. Error: %s", err), 500}
+		}
+
+		bodyString = string(bodyBytes)
+		return responseErr{fmt.Sprintf("Bad status code from CCI API response. Status code: %d, CCI Error: %s", resp.StatusCode, bodyString), 500}
 	}
 
 	if err := json.Unmarshal([]byte(bodyString), &f); err != nil {
@@ -302,7 +313,10 @@ func lookupCreditPerMin(executor, resourceClass, jobName string) (float64, error
 		"windows": {},
 	}
 
-	//TODO add check for executor, just in case
+	if _, ok = resourceClasses[executor]; !ok {
+		return 0, responseErr{fmt.Sprintf("Missing Executor. Please contact jacobjohnston@circleci.com with this error message, your parameters, and executor type. Executor: %s", executor), 500}
+	}
+
 	if creditPerMin, ok = resourceClasses[executor][resourceClass]; !ok {
 		return 0, responseErr{fmt.Sprintf("Missing resource class cost for %s:%s in job %s", executor, resourceClass, jobName), 500}
 	}
