@@ -22,7 +22,7 @@ jobs:
             - checkout
             - run:
                 command: |
-                    curl -sL https://deb.nodesource.com/setup_12.x | bash -
+                    sudo curl -sL https://deb.nodesource.com/setup_12.x | bash -
                     apt-get install -y nodejs
                 name: install node
             - run: npm i -g serverless

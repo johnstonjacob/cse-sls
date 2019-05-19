@@ -21,14 +21,14 @@ package:
         - ./bin/**
 
 functions:
-  workflow-cost-estimator:
-    handler: bin/workflow-cost-estimator
-    timeout: 30
-    memorySize: 1024
-    events:
-      - http:
-          path: workflow/cost-estimate
-          method: get
+    workflow-cost-estimator:
+        handler: bin/workflow-cost-estimator
+        timeout: 30
+        memorySize: 1024
+        events:
+          - http:
+              path: workflow/cost-estimate
+              method: get
 
 plugins:
   - serverless-domain-manager
