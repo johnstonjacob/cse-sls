@@ -1,4 +1,4 @@
-version: 2.1
+version: 2
 
 references:
     base_image: &base_image johnstonjacob/go-node-sls:latest
@@ -57,7 +57,7 @@ jobs:
                       ~/proj/.circleci/scripts/commit_check.sh
 
 workflows:
-    version: 2.1
+    version: 2
     btd:
         jobs:
             - build:
