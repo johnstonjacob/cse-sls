@@ -2,6 +2,7 @@ version: 2
 
 references:
     base_image: &base_image johnstonjacob/go-node-sls:latest
+    machine_image: &machine_image ubuntu-1604:201903-01
 
     working_directory: &working_directory ~/proj
 
@@ -10,17 +11,20 @@ references:
             GO111MODULE: "on"
             BASH_ENV: /root/.bashrc
 
-    default_settings: &default_settings
+    docker_settings: &docker_settings
         docker:
             - image: *base_image
         working_directory: *working_directory
         <<: *environment
 
+    machine_settings: &machine_settings
+        machine:
+            image: *machine_image
+        working_directory: *working_directory
+
 jobs:
     build-images:
-        machine:
-            image: ubuntu-1604:201903-01
-        working_directory: *working_directory
+        <<: *machine_settings
         steps:
             - checkout
             - run:
@@ -28,16 +32,13 @@ jobs:
                 working_directory: ~/proj/dockerfiles
             - run:
                 command: docker tag go-node-sls johnstonjacob/go-node-sls:latest
-                working_directory: ~/proj/dockerfiles
             - run:
                 command: docker login -u $DOCKERHUB_USER -p $DOCKERHUB_PASS
-                working_directory: ~/proj/dockerfiles
             - run:
                 command: docker push johnstonjacob/go-node-sls:latest
-                working_directory: ~/proj/dockerfiles
 
     build:
-        <<: *default_settings
+        <<: *docker_settings
         steps:
             - checkout
             - run:

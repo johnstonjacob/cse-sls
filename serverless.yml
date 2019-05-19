@@ -5,7 +5,7 @@ frameworkVersion: ">=1.28.0 <2.0.0"
 provider:
     name: aws
     runtime: go1.x
-    stage: ${env:SLS_STAGE, 'dev'}
+    stage: ${opt:stage, 'dev'}
     region: us-east-2
     versionFunctions: false
     tags:
@@ -36,5 +36,5 @@ custom:
     customDomain:
         domainName: ce-scripts.circleci-support.com
         basePath: 'api'
-        stage: ${self:provider.stage}
+        stage: prod
         createRoute53Record: true
