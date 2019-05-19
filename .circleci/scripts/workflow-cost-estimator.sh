@@ -1,6 +1,6 @@
 #! /bin/bash
 
-cd ~/proj/workflow-cost-estimator
+cd ~/proj/cse-scripts-lambda
 npm install --save-dev
 
 go get -v -t -d ./..
