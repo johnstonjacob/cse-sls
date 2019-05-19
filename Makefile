@@ -2,7 +2,7 @@
 
 build: gomodgen
 	export GO111MODULE=on
-	env GOOS=linux go build -ldflags="-s -w" -o bin/workflow-cost-estimator workflow-cost-estimator/main.go workflow-cost-estimator/types.go
+	env GOOS=linux go build -ldflags="-s -w" -o bin/workflow-cost-estimator src/workflow-cost-estimator/main.go src/workflow-cost-estimator/types.go
 
 clean:
 	rm -rf ./bin ./vendor Gopkg.lock

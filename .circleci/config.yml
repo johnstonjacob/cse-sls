@@ -52,8 +52,8 @@ jobs:
                         echo 'export SLS_STAGE=staging' | >> $BASH_ENV
                     fi
             - run: npm install --save-dev
-            - run: go get -v -d ./..
-            - run: go test -v ./..
+            - run: go get -v -d .
+            - run: cd ~/proj/src/workflow-cost-estimator && go test -v
             - run: make deploy
 
 workflows:
