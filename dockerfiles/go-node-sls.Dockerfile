@@ -1,6 +1,6 @@
 FROM golang:alpine
 
-RUN apk add --update git bash openssh nodejs-current npm make gcc
+RUN apk add --update git bash openssh nodejs-current npm make gcc musl-dev
 
 WORKDIR ~/proj
 
