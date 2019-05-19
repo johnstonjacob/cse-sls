@@ -1,7 +1,7 @@
 version: 2.1
 
 references:
-    base_image: &base_image johnstonjacob/go-node-sls.Dockerfile:latest
+    base_image: &base_image johnstonjacob/go-node-sls:latest
 
     working_directory: &working_directory ~/proj
 
