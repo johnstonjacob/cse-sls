@@ -27,3 +27,10 @@ jobs:
                 name: install node
             - run: sudo npm i -g serverless
             - run: ~/proj/.circleci/scripts/commit_check.sh
+
+workflows:
+    version: 2.1
+    btd:
+        jobs:
+            build:
+                context: ORB-PUBLISHING

@@ -344,6 +344,7 @@ func snakeCaseToCamelCase(input string) (output string) {
 }
 
 func normalizeVCS(vcs string) (string, error) {
+	// TODO cleaner solution
 	if vcs == "gh" {
 		return "github", nil
 	}
