@@ -12,7 +12,6 @@ provider:
         ce_name: Jacob Johnston
         ce_email: jacobjohnston@gmail.com
         ce_duration: persistent
-        ce_purpose: Serverless framework services for CSE provided scripts, workaround, etc.
 
 package:
     exclude:
