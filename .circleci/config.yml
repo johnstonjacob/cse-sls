@@ -1,7 +1,7 @@
 version: 2.1
 
 references:
-    base_image: &base_image circleci/golang:1.12
+    base_image: &base_image johnstonjacob/cse-scripts-go-node-sls:latest
 
     working_directory: &working_directory ~/proj
 
@@ -17,16 +17,21 @@ references:
         <<: *environment
 
 jobs:
+    build-images:
+        machine:
+            image: ubuntu-1604:201903-01
+        steps:
+            - checkout
+            - run: cd ./dockerfiles
+            - run: docker build -t cse-scripts-go-node-sls .
+            - run: docker tag johnstonjacob/cse-scripts-go-node-sls:latest
+            - run: docker login -u $DOCKERHUB_USER -p $DOCKERHUB_PASS
+            - run: docker push johnstonjacob/cse-scripts-go-node-sls:latest
+
     build:
         <<: *default_settings
         steps:
             - checkout
-            - run:
-                command: |
-                    sudo curl -sL https://deb.nodesource.com/setup_12.x | sudo bash -
-                    sudo apt-get install -y nodejs
-                name: install node
-            - run: sudo npm i -g serverless
             - run:
                 name: set env
                 command: |
@@ -49,4 +54,16 @@ workflows:
         jobs:
             - build:
                 context: ORB-PUBLISHING
+    nightly:
+        jobs:
+            - build-images:
+                context: PAT_WK
+        triggers:
+            - schedule:
+                cron: "10 12 * * *"
+                filters:
+                    branches:
+                        only:
+                            - master
+
 

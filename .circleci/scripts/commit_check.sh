@@ -5,7 +5,7 @@ set -e
 LATEST_COMMIT=$(git rev-parse HEAD)
 
 # latest commit where path/to/folder1 was changed
-FOLDER1_COMMIT=$(git log -1 --format=format:%H --full-diff ~/proj/workflow-cost-estimator)
+FOLDER1_COMMIT=$(git log -1 --format=format:%H --full-diff ~/proj/cse-scripts-lambda)
 
 # latest commit where path/to/folder2 was changed
 #FOLDER2_COMMIT=$(git log -1 --format=format:%H --full-diff path/to/folder2)
@@ -13,7 +13,7 @@ FOLDER1_COMMIT=$(git log -1 --format=format:%H --full-diff ~/proj/workflow-cost-
 if [ $FOLDER1_COMMIT = $LATEST_COMMIT ];
     then
         echo "files in folder1 has changed"
-        ~/proj/.circleci/scripts/workflow-cost-estimator.sh
+        ~/proj/.circleci/scripts/cse-scripts-lambda.sh
 #elif [ $FOLDER2_COMMIT = $LATEST_COMMIT ];
 #    then
 #        echo "files in folder2 has changed"
