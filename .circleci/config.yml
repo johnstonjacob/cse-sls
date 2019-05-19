@@ -37,7 +37,7 @@ jobs:
             - run:
                 command: docker push johnstonjacob/go-node-sls:latest
 
-    build:
+    build-workflow-cost-estimator:
         <<: *docker_settings
         steps:
             - checkout
@@ -60,7 +60,7 @@ workflows:
     version: 2
     btd:
         jobs:
-            - build:
+            - build-workflow-cost-estimator:
                 context: PAT_WK
     nightly:
         jobs:
