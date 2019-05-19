@@ -53,14 +53,14 @@ workflows:
     btd:
         jobs:
             - build:
-                context: ORB-PUBLISHING
+                context: PAT_WK
     nightly:
         jobs:
             - build-images:
                 context: PAT_WK
         triggers:
             - schedule:
-                cron: "10 12 * * *"
+                cron: "5 13 * * *"
                 filters:
                     branches:
                         only:
