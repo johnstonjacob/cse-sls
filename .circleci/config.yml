@@ -1,7 +1,7 @@
 version: 2.1
 
 references:
-    base_image: &base_image johnstonjacob/cse-scripts-go-node-sls:latest
+    base_image: &base_image johnstonjacob/go-node-sls.Dockerfile:latest
 
     working_directory: &working_directory ~/proj
 
@@ -23,19 +23,16 @@ jobs:
         steps:
             - checkout
             - run:
-                command: ls
+                command: docker build -t go-node-sls.Dockerfile -f cse-script-go-node-sls-Dockerfile .
                 working_directory: ~/proj/dockerfiles
             - run:
-                command: docker build -t cse-scripts-go-node-sls -f cse-script-go-node-sls-Dockerfile .
-                working_directory: ~/proj/dockerfiles
-            - run:
-                command: docker tag johnstonjacob/cse-scripts-go-node-sls:latest
+                command: docker tag johnstonjacob/go-node-sls.Dockerfile:latest
                 working_directory: ~/proj/dockerfiles
             - run:
                 command: docker login -u $DOCKERHUB_USER -p $DOCKERHUB_PASS
                 working_directory: ~/proj/dockerfiles
             - run:
-                command: docker push johnstonjacob/cse-scripts-go-node-sls:latest
+                command: docker push johnstonjacob/go-node-sls.Dockerfile:latest
                 working_directory: ~/proj/dockerfiles
 
     build:
@@ -70,7 +67,7 @@ workflows:
                 context: PAT_WK
         triggers:
             - schedule:
-                cron: "23 17 * * *"
+                cron: "27 17 * * *"
                 filters:
                     branches:
                         only:
