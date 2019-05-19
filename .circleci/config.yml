@@ -22,11 +22,18 @@ jobs:
             image: ubuntu-1604:201903-01
         steps:
             - checkout
-            - run: cd ./dockerfiles
-            - run: docker build -t cse-scripts-go-node-sls .
-            - run: docker tag johnstonjacob/cse-scripts-go-node-sls:latest
-            - run: docker login -u $DOCKERHUB_USER -p $DOCKERHUB_PASS
-            - run: docker push johnstonjacob/cse-scripts-go-node-sls:latest
+            - run:
+                command: docker build -t cse-scripts-go-node-sls .
+                working_directory: ~/proj/dockerfiles
+            - run:
+                command: docker tag johnstonjacob/cse-scripts-go-node-sls:latest
+                working_directory: ~/proj/dockerfiles
+            - run:
+                command: docker login -u $DOCKERHUB_USER -p $DOCKERHUB_PASS
+                working_directory: ~/proj/dockerfiles
+            - run:
+                command: docker push johnstonjacob/cse-scripts-go-node-sls:latest
+                working_directory: ~/proj/dockerfiles
 
     build:
         <<: *default_settings
@@ -60,7 +67,7 @@ workflows:
                 context: PAT_WK
         triggers:
             - schedule:
-                cron: "16 17 * * *"
+                cron: "19 17 * * *"
                 filters:
                     branches:
                         only:
