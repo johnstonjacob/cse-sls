@@ -1,0 +1,23 @@
+version: 2.1
+
+references:
+    base_image: &base_image circleci/golang:1.12
+
+    working_directory: &working_directory ~/proj
+
+    environment: &environment
+        environment:
+            GO111MODULE: "ON"
+
+    default_settings: &default_settings
+        docker:
+            - image: *base_image
+        working_directory: *working_directory
+        <<: *environment
+
+jobs:
+    build:
+        <<: *default_settings
+        steps:
+            - checkout
+            - run: ~/proj/.circleci/scripts/commit_check.sh
