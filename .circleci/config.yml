@@ -33,7 +33,7 @@ jobs:
                 command: docker login -u $DOCKERHUB_USER -p $DOCKERHUB_PASS
                 working_directory: ~/proj/dockerfiles
             - run:
-                command: docker push johnstonjacob/go-node-sls.Dockerfile:latest
+                command: docker push johnstonjacob/go-node-sls:latest
                 working_directory: ~/proj/dockerfiles
 
     build:
@@ -68,7 +68,7 @@ workflows:
                 context: PAT_WK
         triggers:
             - schedule:
-                cron: "29 18 * * *"
+                cron: "31 18 * * *"
                 filters:
                     branches:
                         only:
