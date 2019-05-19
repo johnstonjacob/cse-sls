@@ -34,8 +34,8 @@ plugins:
   - serverless-domain-manager
 
 custom:
-  customDomain:
-    domainName: ce-scripts.circleci-support.com
-    basePath: 'api'
-    stage: ${self:provider.stage}
-    createRoute53Record: true
+    customDomain:
+        domainName: ce-scripts.circleci-support.com
+        basePath: 'api'
+        stage: ${self:provider.stage}
+        createRoute53Record: true
