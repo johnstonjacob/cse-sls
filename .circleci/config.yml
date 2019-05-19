@@ -20,13 +20,14 @@ jobs:
     build-images:
         machine:
             image: ubuntu-1604:201903-01
+        working_directory: *working_directory
         steps:
             - checkout
             - run:
-                command: docker build -t cse-scripts-go-node-sls -f go-node-sls.Dockerfile .
+                command: docker build -t go-node-sls -f go-node-sls.Dockerfile .
                 working_directory: ~/proj/dockerfiles
             - run:
-                command: docker tag johnstonjacob/go-node-sls.Dockerfile:latest
+                command: docker tag go-node-sls johnstonjacob/go-node-sls:latest
                 working_directory: ~/proj/dockerfiles
             - run:
                 command: docker login -u $DOCKERHUB_USER -p $DOCKERHUB_PASS
