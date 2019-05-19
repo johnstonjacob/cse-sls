@@ -70,7 +70,7 @@ workflows:
                 context: PAT_WK
         triggers:
             - schedule:
-                cron: "22 17 * * *"
+                cron: "23 17 * * *"
                 filters:
                     branches:
                         only:
