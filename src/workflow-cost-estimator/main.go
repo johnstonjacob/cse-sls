@@ -329,7 +329,7 @@ func snakeCaseToCamelCase(input string) (output string) {
 	isToUpper := false
 
 	for _, v := range input {
-		if isToUpper {
+		if isToUpper && v != '_' {
 			output += strings.ToUpper(string(v))
 			isToUpper = false
 		} else {
