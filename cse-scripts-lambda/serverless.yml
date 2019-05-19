@@ -9,7 +9,7 @@ provider:
     region: us-east-2
     versionFunctions: false
     tags:
-        ce_name: Jacob Johnston
+        ce_name: Jacob J
         ce_email: jacobjohnston@gmail.com
         ce_duration: persistent
 
