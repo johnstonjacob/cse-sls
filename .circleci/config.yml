@@ -8,7 +8,7 @@ references:
     environment: &environment
         environment:
             GO111MODULE: "on"
-            BASH_ENV: "~/.bashrc"
+            BASH_ENV: "~/root/.bashrc"
 
     default_settings: &default_settings
         docker:
@@ -23,7 +23,10 @@ jobs:
         steps:
             - checkout
             - run:
-                command: docker build -t cse-scripts-go-node-sls .
+                command: ls
+                working_directory: ~/proj/dockerfiles
+            - run:
+                command: docker build -t cse-scripts-go-node-sls -f cse-script-go-node-sls-Dockerfile .
                 working_directory: ~/proj/dockerfiles
             - run:
                 command: docker tag johnstonjacob/cse-scripts-go-node-sls:latest
@@ -67,7 +70,7 @@ workflows:
                 context: PAT_WK
         triggers:
             - schedule:
-                cron: "19 17 * * *"
+                cron: "22 17 * * *"
                 filters:
                     branches:
                         only:
