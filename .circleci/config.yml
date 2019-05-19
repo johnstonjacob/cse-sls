@@ -47,9 +47,9 @@ jobs:
                     cd && touch $BASH_ENV
 
                     if [ "${CIRCLE_BRANCH}" == "master" ]; then
-                        echo 'export SLS_STAGE=prod' | >> $BASH_ENV
+                        echo 'export SLS_STAGE=prod' >> $BASH_ENV
                     else
-                        echo 'export SLS_STAGE=staging' | >> $BASH_ENV
+                        echo 'export SLS_STAGE=staging' >> $BASH_ENV
                     fi
             - run: npm install --save-dev
             - run: go get -v -d .
