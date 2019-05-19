@@ -68,7 +68,7 @@ workflows:
                 context: PAT_WK
         triggers:
             - schedule:
-                cron: "29 17 * * *"
+                cron: "30 18 * * *"
                 filters:
                     branches:
                         only:
