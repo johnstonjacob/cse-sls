@@ -8,7 +8,7 @@ clean:
 	rm -rf ./bin ./vendor Gopkg.lock
 
 deploy: clean build
-	sls deploy --verbose
+	sls deploy --verbose --stage ${SLS_STAGE}
 
 gomodgen:
 	chmod u+x gomod.sh
