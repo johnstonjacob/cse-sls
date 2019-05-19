@@ -7,7 +7,7 @@ references:
 
     environment: &environment
         environment:
-            GO111MODULE: "ON"
+            GO111MODULE: "on"
 
     default_settings: &default_settings
         docker:

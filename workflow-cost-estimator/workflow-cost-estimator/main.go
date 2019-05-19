@@ -307,9 +307,10 @@ func lookupCreditPerMin(executor, resourceClass, jobName string) (float64, error
 			"2xlarge": 80,
 			"3xlarge": 120,
 		},
-		"macOS":   {},
-		"GPU":     {},
-		"windows": {},
+		"macOS":       {},
+		"GPU":         {},
+		"windows":     {},
+		"windows-GPU": {},
 	}
 
 	if _, ok = resourceClasses[executor]; !ok {
