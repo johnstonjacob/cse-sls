@@ -21,11 +21,9 @@ jobs:
         steps:
             - checkout
             - run:
-                name: Install node
-                run:
                 command: |
                     curl -sL https://deb.nodesource.com/setup_12.x | bash -
                     apt-get install -y nodejs
                 name: install node
-                run: npm i -g serverless
+            - run: npm i -g serverless
             - run: ~/proj/.circleci/scripts/commit_check.sh
