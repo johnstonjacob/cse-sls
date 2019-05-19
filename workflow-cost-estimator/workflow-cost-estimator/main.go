@@ -96,6 +96,7 @@ func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParame
 	wg.Add(len(jobs.Jobs))
 
 	// TODO: determine ideal chan buffer
+	// grab cpu count from env and choose based on that? max concurrency per cpu is ?
 	c := make(chan float64, 4)
 	ec := make(chan error, 4)
 
