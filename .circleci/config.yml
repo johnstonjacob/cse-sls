@@ -50,11 +50,10 @@ jobs:
                     else
                         echo 'export SLS_STAGE=staging' | >> $BASH_ENV
                     fi
-            - run:
-                  name: Run commit check and BTD
-                  command: |
-                      source $BASH_ENV
-                      ~/proj/.circleci/scripts/commit_check.sh
+            - run: npm install --save-dev
+            - run: go get -v -d ./..
+            - run: go test -v ./..
+            - run: make deploy
 
 workflows:
     version: 2
