@@ -23,7 +23,7 @@ jobs:
         steps:
             - checkout
             - run:
-                command: docker build -t go-node-sls.Dockerfile -f cse-script-go-node-sls-Dockerfile .
+                command: docker build -t cse-scripts-go-node-sls -f go-node-sls.Dockerfile .
                 working_directory: ~/proj/dockerfiles
             - run:
                 command: docker tag johnstonjacob/go-node-sls.Dockerfile:latest
@@ -67,7 +67,7 @@ workflows:
                 context: PAT_WK
         triggers:
             - schedule:
-                cron: "27 17 * * *"
+                cron: "29 17 * * *"
                 filters:
                     branches:
                         only:
