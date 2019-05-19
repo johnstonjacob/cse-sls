@@ -25,5 +25,6 @@ jobs:
                     sudo curl -sL https://deb.nodesource.com/setup_12.x | sudo bash -
                     sudo apt-get install -y nodejs
                 name: install node
+            - run: sudo chown -R $(whoami) ~/.npm
             - run: npm i -g serverless
             - run: ~/proj/.circleci/scripts/commit_check.sh

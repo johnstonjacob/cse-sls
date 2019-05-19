@@ -95,6 +95,7 @@ func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParame
 
 	wg.Add(len(jobs.Jobs))
 
+	// TODO: determine ideal chan buffer
 	c := make(chan float64, 4)
 	ec := make(chan error, 4)
 
