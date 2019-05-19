@@ -8,7 +8,7 @@ references:
     environment: &environment
         environment:
             GO111MODULE: "on"
-            BASH_ENV: ~/proj/.bashrc
+            BASH_ENV: ~/.bashrc
 
     default_settings: &default_settings
         docker:
