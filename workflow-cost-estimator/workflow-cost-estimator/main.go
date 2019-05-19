@@ -385,6 +385,7 @@ func paramSetup(request map[string]string) (queryParameters, circleURLs, error) 
 		return params, urls, err
 	}
 
+	// TODO: seperate url logic
 	if request["circle_url"] == "" {
 		urls.circleURL = "https://circleci.com"
 	} else {
