@@ -88,6 +88,7 @@ func generateResponse(responseBody responseBody, err error) *Response {
 	}
 }
 
+// TODO seperate logic and make this function (more) testable
 func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParameters) (responseBody, error) {
 	var totalCredits float64
 	var wg sync.WaitGroup
@@ -376,7 +377,7 @@ func paramSetup(request map[string]string) (queryParameters, circleURLs, error) 
 
 	// TODO refactor for /api/v2/workflow once project triplet is added to response
 
-	//TODO what if extra param is passed?
+	//TODO what if extra param is passed? consider if i will ever need extra params
 
 	for _, v := range requiredParams {
 		if _, ok = request[v]; !ok {
