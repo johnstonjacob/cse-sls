@@ -23,30 +23,6 @@ func TestSnakeCaseToCamelCase(t *testing.T) {
 
 }
 
-func TestNormalizeVCS(t *testing.T) {
-	tables := []struct {
-		input    string
-		expected string
-		errRes   string
-	}{
-		{"gh", "github", ""},
-		{"bb", "bitbucket", ""},
-		{"github", "github", ""},
-		{"bitbucket", "bitbucket", ""},
-		{"gl", "", "VCS gl is not valid."},
-	}
-
-	for _, table := range tables {
-		if output, err := normalizeVCS(table.input); output != table.expected {
-			t.Errorf("Got %s, expected %s", output, table.expected)
-		} else if err != nil {
-			if err.Error() != table.errRes {
-				t.Errorf("Got %s, expected %s", err.Error(), table.errRes)
-			}
-		}
-	}
-}
-
 func round(num float64) int {
 	return int(num + math.Copysign(0.5, num))
 }
