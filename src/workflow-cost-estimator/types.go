@@ -90,6 +90,7 @@ type Jobs struct {
 	StartTime    time.Time     `json:"start_time"`
 	Dependencies []interface{} `json:"dependencies"`
 	JobNumber    int           `json:"job_number"`
+	ProjectSlug  string        `json:"project_slug"`
 	StopTime     time.Time     `json:"stop_time"`
 }
 type workflowJobsResponse struct {

@@ -10,9 +10,6 @@ Query parameters:
 |--|--|
 | circle_token | CircleCI API token |
 | workflow_id | The workflow ID to estimate the cost of |
-| project_name | The repository name corresponding to the workflow_id |
-| project_vcs | The name of the VCS provider, IE gh or github |
-| project_user | The user or org name of the project corresponding to the workflow_id |
 
 Example response:
 `{

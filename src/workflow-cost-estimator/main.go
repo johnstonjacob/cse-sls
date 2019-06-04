@@ -104,7 +104,7 @@ func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParame
 	for _, job := range jobs.Jobs {
 		go func(job Jobs) {
 
-			jobURL := fmt.Sprintf("%sproject/%s/%s/%s/%d", urls.v1URL, params["projectVcs"], params["projectUser"], params["projectName"], job.JobNumber)
+			jobURL := fmt.Sprintf("%sproject/%s/%d", urls.v1URL, job.ProjectSlug, job.JobNumber)
 			cost, err := getJobDetails(jobURL, params)
 
 			if err != nil {
@@ -349,35 +349,13 @@ func snakeCaseToCamelCase(input string) (output string) {
 
 }
 
-func normalizeVCS(vcs string) (string, error) {
-	// TODO cleaner solution
-	if vcs == "gh" {
-		return "github", nil
-	}
-
-	if vcs == "bb" {
-		return "bitbucket", nil
-	}
-
-	if vcs == "github" || vcs == "bitbucket" {
-		return vcs, nil
-	}
-
-	return "", responseErr{fmt.Sprintf("VCS %s is not valid.", vcs), 400}
-}
-
 func paramSetup(request map[string]string) (queryParameters, circleURLs, error) {
 	params := make(queryParameters)
 	var urls circleURLs
 	var ok bool
-	var err error
-
-	// TODO refactor for /api/v2/workflow once project triplet is added to response
-	requiredParams := []string{"circle_token", "workflow_id", "project_name", "project_vcs", "project_user"}
-
-	// TODO refactor for /api/v2/workflow once project triplet is added to response
 
 	//TODO what if extra param is passed? consider if i will ever need extra params
+	requiredParams := []string{"circle_token", "workflow_id"}
 
 	for _, v := range requiredParams {
 		if _, ok = request[v]; !ok {
@@ -386,12 +364,6 @@ func paramSetup(request map[string]string) (queryParameters, circleURLs, error) 
 		}
 		p := snakeCaseToCamelCase(v)
 		params[p] = request[v]
-	}
-
-	params["projectVcs"], err = normalizeVCS(params["projectVcs"])
-
-	if err != nil {
-		return params, urls, err
 	}
 
 	// TODO: seperate url logic
