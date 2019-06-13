@@ -66,6 +66,10 @@ workflows:
         jobs:
             - build-workflow-cost-estimator:
                 context: PAT_WK
+                filters:
+                    branches:
+                        only:
+                            - master
     nightly:
         jobs:
             - build-images:

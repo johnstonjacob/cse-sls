@@ -26,7 +26,7 @@ type Response events.APIGatewayProxyResponse
 func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (Response, error) {
 	var responseBody responseBody
 
-	params, urls, err := paramSetup(request.QueryStringParameters)
+	params, urls, err := paramSetup(request)
 	if err != nil {
 		return *generateResponse(responseBody, err), nil
 	}
@@ -88,40 +88,54 @@ func generateResponse(responseBody responseBody, err error) *Response {
 	}
 }
 
+type jobTuple struct {
+	cost float64
+	time time.Duration
+	name string
+}
+
 // TODO seperate logic and make this function (more) testable
 func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParameters) (responseBody, error) {
 	var totalCredits float64
+	var totalTime time.Duration
+	var jobsRes []job
 	var wg sync.WaitGroup
 	var errors []error
 
 	wg.Add(len(jobs.Jobs))
 
 	// TODO: determine ideal chan buffer
-	// grab cpu count from env and choose based on that? max concurrency per cpu is ?
-	c := make(chan float64, 4)
+	c := make(chan jobTuple, 4)
 	ec := make(chan error, 4)
 
 	for _, job := range jobs.Jobs {
 		go func(job Jobs) {
+			if job.Status == "blocked" {
+				c <- jobTuple{0, 0, fmt.Sprintf("Blocked - %s", job.Name)}
+				return
+			}
 
 			jobURL := fmt.Sprintf("%sproject/%s/%d", urls.v1URL, job.ProjectSlug, job.JobNumber)
-			cost, err := getJobDetails(jobURL, params)
+			cost, time, err := getJobDetails(jobURL, params)
 
 			if err != nil {
 				ec <- err
 				return
 			}
-			c <- cost
+			c <- jobTuple{cost, time, job.Name}
 		}(job)
 	}
 
-	go func(totalCredits *float64) {
-		for credits := range c {
-			*totalCredits += credits
+	go func(totalCredits *float64, totalTime *time.Duration, jobsRes *[]job) {
+		for details := range c {
+			*totalCredits += details.cost
+			*totalTime += details.time
+			totalPrice := math.Ceil(creditCost(details.cost)*100) / 100
+			*jobsRes = append(*jobsRes, job{details.name, totalPrice, details.cost, details.time.String()})
 			wg.Done()
 		}
 
-	}(&totalCredits)
+	}(&totalCredits, &totalTime, &jobsRes)
 
 	go func(errors *[]error) {
 		for err := range ec {
@@ -137,12 +151,12 @@ func tallyJobCost(jobs workflowJobsResponse, urls circleURLs, params queryParame
 	}
 
 	totalCredits = math.Ceil(totalCredits)
-	totalPrice := math.Ceil(costOfWorkflow(totalCredits)*100) / 100
+	totalPrice := math.Ceil(creditCost(totalCredits)*100) / 100
 
-	return *newResponseBody(totalCredits, totalPrice), nil
+	return *newResponseBody(totalCredits, totalPrice, totalTime, jobsRes), nil
 }
 
-func getJobDetails(url string, params queryParameters) (float64, error) {
+func getJobDetails(url string, params queryParameters) (float64, time.Duration, error) {
 	var response jobDetailResponse
 	var buildTime time.Duration
 
@@ -150,20 +164,21 @@ func getJobDetails(url string, params queryParameters) (float64, error) {
 	defer resp.Body.Close()
 
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
 	err = unmarshalAPIResp(resp, &response)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
+	name := response.Workflows.JobName
 	resourceClass := response.Picard.ResourceClass.Class
 	executor := response.Picard.Executor
-	creditPerMin, err := lookupCreditPerMin(executor, resourceClass, response.Workflows.JobName)
+	creditPerMin, err := lookupCreditPerMin(executor, resourceClass, name)
 
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
 	for _, step := range response.Steps {
@@ -180,12 +195,12 @@ func getJobDetails(url string, params queryParameters) (float64, error) {
 
 	credits := buildTime.Minutes() * creditPerMin
 
-	return credits, nil
+	return credits, buildTime, nil
 }
 
 func getWorkflowJobs(urls circleURLs, params queryParameters) (workflowJobsResponse, error) {
 	var response workflowJobsResponse
-	workflowJobsURL := fmt.Sprintf("%sworkflow/%s/jobs", urls.v2URL, params["workflowId"])
+	workflowJobsURL := fmt.Sprintf("%sworkflow/%s/jobs", urls.v2URL, params["workflowID"])
 
 	resp, err := makeBasicAuthRequest(workflowJobsURL, params["circleToken"])
 	defer resp.Body.Close()
@@ -205,7 +220,7 @@ func getWorkflowJobs(urls circleURLs, params queryParameters) (workflowJobsRespo
 
 func getWorkflowStatus(urls circleURLs, params queryParameters) error {
 	var response workflowResponse
-	workflowURL := fmt.Sprintf("%sworkflow/%s", urls.v2URL, params["workflowId"])
+	workflowURL := fmt.Sprintf("%sworkflow/%s", urls.v2URL, params["workflowID"])
 
 	resp, err := makeBasicAuthRequest(workflowURL, params["circleToken"])
 	defer resp.Body.Close()
@@ -281,7 +296,7 @@ func makeBasicAuthRequest(url string, token string) (*http.Response, error) {
 	return resp, nil
 }
 
-func costOfWorkflow(credits float64) float64 {
+func creditCost(credits float64) float64 {
 	return credits * 0.0006
 }
 
@@ -349,28 +364,30 @@ func snakeCaseToCamelCase(input string) (output string) {
 
 }
 
-func paramSetup(request map[string]string) (queryParameters, circleURLs, error) {
-	params := make(queryParameters)
+func paramSetup(request events.APIGatewayProxyRequest) (queryParameters, circleURLs, error) {
 	var urls circleURLs
 	var ok bool
+	qs := request.QueryStringParameters
+	params := make(queryParameters)
 
-	//TODO what if extra param is passed? consider if i will ever need extra params
-	requiredParams := []string{"circle_token", "workflow_id"}
+	requiredParams := []string{"circle_token"}
 
 	for _, v := range requiredParams {
-		if _, ok = request[v]; !ok {
+		if _, ok = qs[v]; !ok {
 			return params, urls, responseErr{fmt.Sprintf("Please provide query parameters: %s", strings.Join(requiredParams, ", ")), 400}
 
 		}
 		p := snakeCaseToCamelCase(v)
-		params[p] = request[v]
+		params[p] = qs[v]
 	}
 
+	params["workflowID"] = request.PathParameters["workflow_id"]
+
 	// TODO: seperate url logic
-	if request["circle_url"] == "" {
+	if qs["circle_url"] == "" {
 		urls.circleURL = "https://circleci.com"
 	} else {
-		urls.circleURL = request["circle_url"]
+		urls.circleURL = qs["circle_url"]
 	}
 
 	urls.v1URL = fmt.Sprintf("%s/api/v1.1/", urls.circleURL)

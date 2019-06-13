@@ -10,18 +10,28 @@ type circleURLs struct {
 
 type queryParameters map[string]string
 
+type job struct {
+	Name         string  `json:"job_name"`
+	TotalCost    float64 `json:"total_cost"`
+	TotalCredits float64 `json:"total_credits"`
+	TotalRuntime string  `json:"total_runtime"`
+}
+
 type responseBody struct {
 	TotalCost    float64 `json:"total_cost"`
 	TotalCredits float64 `json:"total_credits"`
 	TotalRuntime string  `json:"total_runtime"`
 	Disclaimer   string  `json:"disclaimer"`
+	Jobs         []job   `json:"jobs"`
 }
 
-func newResponseBody(totalCredits, totalCost float64) *responseBody {
+func newResponseBody(totalCredits, totalCost float64, totalRuntime time.Duration, jobs []job) *responseBody {
 	b := new(responseBody)
 	disclaimer := "This is a cost estimate. This is not an official CircleCI endpoint. Please contact jacobjohnston@circleci.com for questions."
 	b.TotalCost = totalCost
 	b.TotalCredits = totalCredits
+	b.TotalRuntime = totalRuntime.String()
+	b.Jobs = jobs
 	b.Disclaimer = disclaimer
 
 	return b

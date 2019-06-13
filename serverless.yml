@@ -26,8 +26,11 @@ functions:
         memorySize: 1024
         events:
           - http:
-              path: workflow/cost-estimate
+              path: workflow/cost-estimate/{workflow_id}
               method: get
+              parameters:
+                  paths:
+                      workflow_id: true
 
 plugins:
   - serverless-domain-manager
