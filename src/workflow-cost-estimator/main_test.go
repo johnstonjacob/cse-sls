@@ -32,7 +32,7 @@ func toFixed(num float64, precision int) float64 {
 	return float64(round(num*output)) / output
 }
 
-func TestCostOfWorkflow(t *testing.T) {
+func TestCreditCost(t *testing.T) {
 	tables := []struct {
 		input    float64
 		expected float64
@@ -46,7 +46,7 @@ func TestCostOfWorkflow(t *testing.T) {
 	}
 
 	for _, table := range tables {
-		if output := costOfWorkflow(table.input); toFixed(output, 4) != toFixed(table.expected, 4) {
+		if output := creditCost(table.input); toFixed(output, 4) != toFixed(table.expected, 4) {
 			t.Errorf("Got %f, expected %f", output, table.expected)
 		}
 	}
