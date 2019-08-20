@@ -105,7 +105,7 @@ type Jobs struct {
 }
 type workflowJobsResponse struct {
 	NextPageToken interface{} `json:"next_page_token"`
-	Jobs          []Jobs      `json:"jobs"`
+	Jobs          []Jobs      `json:"items"`
 }
 
 type workflowResponse struct {
